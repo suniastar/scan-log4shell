@@ -24,8 +24,11 @@ jobs:
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v1.0.4
 
-      - name: Gradle Build
+      - name: Setup Gradle Build
         uses: gradle/gradle-build-action@v2.0.1
+
+      - name: Build Jar Archive
+        run: ./gradlew build
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
