@@ -1,0 +1,80 @@
+name: CI/CD
+
+on: [push, pull_request, workflow_dispatch]
+
+env:
+  DOCKERHUB_USERNAME: suniastar
+  DOCKER_BASE: openjdk-17:slim
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v2.4.0
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v2.4.0
+        with:
+          distribution: 'zulu'
+          java-version: 17
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v1.0.4
+
+      - name: Setup Gradle Build
+        uses: gradle/gradle-build-action@v2.0.1
+
+      - name: Build Jar Archive
+        run: ./gradlew build
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: logldap
+          path: logldap/build/libs/
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: build
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v2.4.0
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: logldap
+          path: logldap/
+
+      - name: Build Docker image
+        run: |
+          docker pull ${{ env.DOCKER_BASE }}
+          docker build \
+            --pull \
+            --label "org.opencontainers.image.created=$(date --rfc-3339=seconds)" \
+            --label "org.opencontainers.image.authors=Frederik Enste <frederik@fenste.de>, kost <https://github.com/kost>" \
+            --label "org.opencontainers.image.url=https://github.com/suniastar/scan-log4shell" \
+            --label "org.opencontainers.image.source=https://github.com/suniastar/scan-log4shell.git" \
+            --label "org.opencontainers.image.version=0.1" \
+            --label "org.opencontainers.image.vendor=suniastar" \
+            --label "org.opencontainers.image.title=LogLDAP" \
+            --label "org.opencontainers.image.description=A mock LDAP server that locks incomming requests." \
+            --label "org.opencontainers.image.base.name=${{ env.DOCKER_BASE }}" \
+            --label  org.opencontainers.image.base.digest=$(docker image inspect ${{ env.DOCKER_BASE }} | grep -o 'Id": "[a-z0-9:]*' | sed 's/Id": "//g') \
+            --tag "${{ env.DOCKERHUB_USERNAME }}/logldap:latest" \
+            ./logldap
+
+      - name: Docker Login
+        uses: docker/login-action@v1.10.0
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Upload Docker image
+        run: docker push "${{ env.DOCKERHUB_USERNAME }}/logldap:latest"
