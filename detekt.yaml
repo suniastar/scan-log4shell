@@ -1,0 +1,26 @@
+build:
+  weights:
+    comments: 0   # missing comments should not fail the build
+
+comments:
+  EndOfSentenceFormat:
+    active: false
+  CommentOverPrivateFunction:
+    active: false
+
+complexity:
+  LargeClass:
+    excludes: [ '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**' ]
+  LongMethod:
+    excludes: [ '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**' ]
+    threshold: 80
+  ComplexInterface:
+    threshold: 15
+
+naming:
+  FunctionMaxLength:
+    maximumFunctionNameLength: 25
+
+style:
+  MaxLineLength:
+    maxLineLength: 120
