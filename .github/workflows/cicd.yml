@@ -4,7 +4,7 @@ on: [push, pull_request, workflow_dispatch]
 
 env:
   DOCKERHUB_USERNAME: suniastar
-  DOCKER_BASE: openjdk-17:slim
+  DOCKER_BASE: openjdk:17-slim
 
 jobs:
   build:
@@ -27,10 +27,10 @@ jobs:
       - name: Setup Gradle Build
         uses: gradle/gradle-build-action@v2.0.1
 
-      - name: Build Jar Archive
-        run: ./gradlew build
+      - name: Build JAR Archives
+        run: ./gradlew --no-daemon build
 
-      - name: Upload Artifact
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: logldap
@@ -46,19 +46,20 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2.4.0
 
-      - name: Download Artifact
+      - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
           name: logldap
-          path: logldap/
+          path: logldap/build/libs/
 
-      - name: Build Docker image
+      - name: Build logldap Docker image
         run: |
+          cd ./logldap
           docker pull ${{ env.DOCKER_BASE }}
           docker build \
             --pull \
             --label "org.opencontainers.image.created=$(date --rfc-3339=seconds)" \
-            --label "org.opencontainers.image.authors=Frederik Enste <frederik@fenste.de>, kost <https://github.com/kost>" \
+            --label "org.opencontainers.image.authors=Frederik Enste <frederik@fenste.de>" \
             --label "org.opencontainers.image.url=https://github.com/suniastar/scan-log4shell" \
             --label "org.opencontainers.image.source=https://github.com/suniastar/scan-log4shell.git" \
             --label "org.opencontainers.image.version=0.1" \
@@ -68,7 +69,8 @@ jobs:
             --label "org.opencontainers.image.base.name=${{ env.DOCKER_BASE }}" \
             --label  org.opencontainers.image.base.digest=$(docker image inspect ${{ env.DOCKER_BASE }} | grep -o 'Id": "[a-z0-9:]*' | sed 's/Id": "//g') \
             --tag "${{ env.DOCKERHUB_USERNAME }}/logldap:latest" \
-            ./logldap
+            .
+          cd -
 
       - name: Docker Login
         uses: docker/login-action@v1.10.0
